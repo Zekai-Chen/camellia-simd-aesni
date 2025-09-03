@@ -78,11 +78,11 @@ ll ^= t2;
 4. **Memory Profiling**: Cache usage and bandwidth analysis
 
 ### **Achieved Performance Results**
-| Implementation | Measured Throughput | Speedup vs C | Platform |
-|----------------|-------------------|--------------|----------|
-| **C Reference** | 68.06 MB/s | 1.0x (baseline) | AWS Graviton3 |
-| **AArch64 SIMD** | **448.37 MB/s** | **6.59x** | AWS Graviton3 |
-| **Cross-compiled** | 447.77 MB/s | 3.82x | AWS Graviton3 |
+| Implementation | Measured Throughput | Speedup vs C | Platform | Maintainability |
+|----------------|-------------------|--------------|----------|-----------------|
+| **C Reference** | 68.00 MB/s | 1.0x (baseline) | AWS Graviton3 | ⭐⭐⭐ |
+| **C Intrinsics** | **210.42 MB/s** | **3.09x** | AWS Graviton3 | ⭐⭐⭐⭐⭐ |
+| **Hand Assembly** | **448.37 MB/s** | **6.59x** | AWS Graviton3 | ⭐⭐ |
 
 ## 🔧 Quality Assurance
 
@@ -127,11 +127,12 @@ taskset -c 1 ./test_optimized
 ## 🎉 Project Impact
 
 ### **Technical Achievements**
-- **Architecture Translation**: Successful x86_64 → AArch64 SIMD port
-- **Performance Optimization**: 6.59x real-world speedup achieved on AWS Graviton3
+- **Dual Implementation Strategy**: Both C Intrinsics and Hand Assembly versions
+- **Performance Optimization**: 6.59x (Assembly) and 3.09x (Intrinsics) speedup on AWS Graviton3
+- **Development Flexibility**: Choose between maximum performance or maintainability  
 - **Hardware Utilization**: Full exploitation of NEON+Crypto capabilities
-- **Production Quality**: Industrial-grade robustness and reliability
-- **Advanced Compilation**: Separate optimization strategies for C and assembly
+- **Production Quality**: Industrial-grade robustness and comprehensive testing
+- **Advanced Compilation**: Separate optimization strategies preventing compiler over-optimization
 
 ### **Business Value**
 - **Cost Efficiency**: Reduced CPU usage for encryption workloads

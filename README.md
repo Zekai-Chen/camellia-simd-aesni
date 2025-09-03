@@ -3,11 +3,11 @@
 This repository contains x86_64 (AES-NI, VAES, GFNI), ARMv8 Crypto Extension and PowerPC crypto instruction set accelerated vector implementations of the [Camellia cipher](https://info.isl.ntt.co.jp/crypt/eng/camellia/).
 
 ## 🚀 **NEW: AArch64 Production Implementation**
-**Performance: 448.37 MB/s (6.59x speedup vs C reference)**
+**Performance: Hand Assembly 448.37 MB/s, C Intrinsics 210.42 MB/s**
 
 - **32-block parallel processing** with NEON SIMD optimization
 - **AES Crypto Extensions** hardware acceleration  
-- **Production-grade quality** with comprehensive testing
+- **Dual implementation**: Hand-optimized Assembly + C Intrinsics
 - **AWS Graviton3 optimized** with advanced compilation techniques
 
 For x86_64, both Intel C intrinsics and assembly implementations are provided, with assembly yielding best performance. For ARMv8/AArch64, a high-performance 32-block parallel NEON+Crypto implementation is now available.
@@ -30,26 +30,35 @@ CFB decryption, XTS, OCB, etc.
 # Implementations
 
 ## AArch64 Production Implementation (NEW) 🚀
-**32-block parallel processing** - The latest high-performance implementation for ARM platforms:
+**32-block parallel processing** - Dual implementation for ARM platforms:
 
+### Hand-Optimized Assembly Version
 - **[camellia_aarch64_neon_crypto.S](camellia_aarch64_neon_crypto.S)**: 
   - Hand-optimized AArch64 assembly with NEON SIMD and Crypto Extensions
-  - **Processes 32 blocks (512 bytes) in parallel** for maximum throughput
   - **Performance: 448.37 MB/s** (6.59x speedup vs C reference) on AWS Graviton3
-  - **Production-grade quality** with comprehensive error handling and testing
-  - Requires AArch64, NEON, and ARMv8 Crypto Extensions
-  
-- **[test_aarch64_complex.c](test_aarch64_complex.c)**:
-  - Complete performance testing and validation suite
-  - Cross-compilation support via Makefile.aarch64
-  - Memory alignment verification and safety checks
+  - Maximum performance for production workloads
+
+### C Intrinsics Version  
+- **[camellia_aarch64_neon_intrinsics.c](camellia_aarch64_neon_intrinsics.c)**:
+  - C NEON intrinsics implementation with AES Crypto Extensions
+  - **Performance: 210.42 MB/s** (3.09x speedup vs C reference) on AWS Graviton3
+  - Better maintainability and cross-platform portability
+  - 47% of assembly performance with significantly easier development
+
+### Testing and Validation
+- **[test_aarch64_complex.c](test_aarch64_complex.c)**: Assembly version testing
+- **[test_aarch64_intrinsics.c](test_aarch64_intrinsics.c)**: Comprehensive comparison testing
+- Cross-compilation support via multiple build systems
+- Memory alignment verification and safety checks
 
 ### Quick Start (AArch64):
+
+#### Assembly Version (Maximum Performance)
 ```bash
 # Cross-compile (x86_64 → AArch64)
 make -f Makefile.aarch64 test_complex
 
-# Run on ARM platform
+# Run on ARM platform  
 ./test_aarch64_complex
 
 # For optimal Graviton3 performance:
@@ -59,6 +68,19 @@ gcc -O1 -static -Wall -fno-unroll-loops -fno-tree-vectorize -fno-builtin \
 gcc -mcpu=neoverse-v1+crypto -c camellia_aarch64_neon_crypto.S -o camellia_simd.o
 gcc -O1 -static test_main.o camellia_simd.o -o test_aarch64_complex_optimized
 taskset -c 1 ./test_aarch64_complex_optimized
+```
+
+#### C Intrinsics Version (Better Maintainability)
+```bash
+# Build on ARM platform (native compilation recommended)
+chmod +x build_intrinsics_arm.sh
+./build_intrinsics_arm.sh
+
+# Run comprehensive comparison test
+taskset -c 1 ./test_aarch64_intrinsics_optimized
+
+# Or use Makefile
+make -f Makefile.intrinsics test
 ```
 
 ## SIMD128

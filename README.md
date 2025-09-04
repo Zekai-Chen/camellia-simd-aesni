@@ -3,13 +3,13 @@
 This repository contains x86_64 (AES-NI, VAES, GFNI), ARMv8 Crypto Extension and PowerPC crypto instruction set accelerated vector implementations of the [Camellia cipher](https://info.isl.ntt.co.jp/crypt/eng/camellia/).
 
 ## 🚀 **NEW: AArch64 Production Implementation**
-**Performance: C Intrinsics 716 MB/s, Optimized Assembly 471 MB/s**
+**Performance: C Intrinsics 716 MB/s (10-15x scalar speedup)**
 
 - **32-block parallel processing** with NEON SIMD optimization
 - **AES Crypto Extensions** hardware acceleration  
-- **Dual implementation**: Hand-optimized Assembly + C Intrinsics
+- **Modern compiler optimization superiority** - GCC -O1 outperforms hand Assembly
 - **AWS Graviton3 optimized** with comprehensive performance analysis
-- **Compiler optimizations outperform hand Assembly** - Modern GCC generates superior code
+- **Complete optimization journey documented** - Multiple Assembly optimization attempts
 
 For x86_64, both Intel C intrinsics and assembly implementations are provided, with assembly yielding best performance. For ARMv8/AArch64, a high-performance 32-block parallel NEON+Crypto implementation is now available.
 

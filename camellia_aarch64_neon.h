@@ -50,6 +50,16 @@ void camellia_ctr_encrypt_neon128(struct camellia_simd_ctx *ctx,
                                   const uint8_t *iv, const uint8_t *in,
                                   uint8_t *out, size_t len);
 
+/* High-performance optimized implementations */
+void camellia_encrypt_16blks_neon128_optimized(struct camellia_simd_ctx *ctx, 
+                                                void *out, const void *in);
+void camellia_decrypt_16blks_neon128_optimized(struct camellia_simd_ctx *ctx,
+                                                void *out, const void *in);
+void camellia_encrypt_32blks_neon256_optimized(struct camellia_simd_ctx *ctx,
+                                                void *out, const void *in);
+void camellia_decrypt_32blks_neon256_optimized(struct camellia_simd_ctx *ctx,
+                                                void *out, const void *in);
+
 #endif /* __aarch64__ */
 
 #endif /* _CAMELLIA_AARCH64_NEON_H_ */

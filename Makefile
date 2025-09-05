@@ -32,7 +32,8 @@ endif
 ifneq ($(shell which $(CC_AARCH64)),)
 	PROGRAMS += test_simd128_intrinsics_aarch64 simple_aarch64_test \
 		test_simd128_neon_aarch64 test_simd256_neon_aarch64 \
-		test_camellia_benchmark_aarch64 openssl_benchmark_aarch64
+		test_camellia_benchmark_aarch64 openssl_benchmark_aarch64 \
+		test_neon_optimized
 endif
 ifneq ($(shell which $(CC_PPC64LE)),)
 	PROGRAMS += test_simd128_intrinsics_ppc64le
@@ -155,6 +156,13 @@ openssl_benchmark_aarch64: camellia_aarch64_neon.o \
 			   camellia_ref_aarch64.o
 	$(CC_AARCH64) $^ -o $@ $(LDFLAGS) -lssl -lcrypto
 
+test_neon_optimized: camellia_aarch64_neon.o \
+		     camellia_aarch64_neon_optimized.o \
+		     camellia_simd128_with_aarch64_ce.o \
+		     test_neon_optimized.o \
+		     camellia_ref_aarch64.o
+	$(CC_AARCH64) $^ -o $@ $(LDFLAGS)
+
 
 camellia_simd128_with_x86_aesni.o: camellia_simd128_with_aes_instruction_set.c
 	$(CC_X86_64) $(CFLAGS_SIMD128_X86) -c $< -o $@
@@ -242,6 +250,12 @@ openssl_benchmark.o: openssl_benchmark.c
 	$(CC_AARCH64) $(CFLAGS_SIMD128_ARM_NEON) -DHAVE_OPENSSL -c $< -o $@
 
 simple_aarch64_test.o: simple_aarch64_test.c
+	$(CC_AARCH64) $(CFLAGS_SIMD128_ARM_NEON) -c $< -o $@
+
+camellia_aarch64_neon_optimized.o: camellia_aarch64_neon_optimized.c
+	$(CC_AARCH64) $(CFLAGS_SIMD128_ARM_NEON) -c $< -o $@
+
+test_neon_optimized.o: test_neon_optimized.c
 	$(CC_AARCH64) $(CFLAGS_SIMD128_ARM_NEON) -c $< -o $@
 
 camellia_simd128_with_ppc64le.o: camellia_simd128_with_aes_instruction_set.c

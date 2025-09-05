@@ -27,15 +27,15 @@ This implementation extends the existing x86 SIMD-optimized Camellia cipher with
 - ✅ Complete KA/KB key scheduling
 - ✅ FL/FL⁻¹ layer implementation
 - ✅ Official KAT (Known Answer Test) vectors
-- ✅ Cross-validation with OpenSSL
+- ✅ Cross-validation with reference implementation
 
 ### 🔧 Engineering Features
 
 - **Runtime Detection**: HWCAP-based feature detection
 - **Automatic Fallback**: Graceful degradation when hardware unavailable
 - **CTR Mode Support**: Optimized counter mode for streaming
-- **Multiple S-box Variants**: A/B testing and performance tuning
-- **Comprehensive Benchmarking**: Performance comparison with OpenSSL
+- **Multiple S-box Variants**: Performance optimization strategies
+- **Comprehensive Testing**: Performance benchmarking and validation
 
 ## Architecture
 
@@ -76,10 +76,13 @@ make clean
 make test_simd128_intrinsics_aarch64
 ./test_simd128_intrinsics_aarch64
 
+# Or use the comprehensive test suite
+./complete_test.sh
+
 # Expected output:
 # All selftests should pass
 # Reference: ~170 MiB/s
-# SIMD128: ~610-614 MiB/s
+# SIMD128: ~614 MiB/s (3.6x speedup)
 ```
 
 ### Manual Build

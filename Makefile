@@ -163,6 +163,13 @@ test_neon_optimized: camellia_aarch64_neon.o \
 		     camellia_ref_aarch64.o
 	$(CC_AARCH64) $^ -o $@ $(LDFLAGS)
 
+# AArch64 Assembly implementation test
+test_simd128_asm_aarch64: camellia_simd128_aarch64_neon_crypto.o \
+			  test_simd128_asm_aarch64.o \
+			  camellia_simd128_with_aarch64_ce.o \
+			  camellia_ref_aarch64.o
+	$(CC_AARCH64) $^ -o $@ $(LDFLAGS)
+
 
 camellia_simd128_with_x86_aesni.o: camellia_simd128_with_aes_instruction_set.c
 	$(CC_X86_64) $(CFLAGS_SIMD128_X86) -c $< -o $@
@@ -256,6 +263,13 @@ camellia_aarch64_neon_optimized.o: camellia_aarch64_neon_optimized.c
 	$(CC_AARCH64) $(CFLAGS_SIMD128_ARM_NEON) -c $< -o $@
 
 test_neon_optimized.o: test_neon_optimized.c
+	$(CC_AARCH64) $(CFLAGS_SIMD128_ARM_NEON) -c $< -o $@
+
+# AArch64 Assembly implementation rules
+camellia_simd128_aarch64_neon_crypto.o: camellia_simd128_aarch64_neon_crypto.S
+	$(CC_AARCH64) $(CFLAGS_SIMD128_ARM_NEON) -c $< -o $@
+
+test_simd128_asm_aarch64.o: test_simd128_asm_aarch64.c
 	$(CC_AARCH64) $(CFLAGS_SIMD128_ARM_NEON) -c $< -o $@
 
 camellia_simd128_with_ppc64le.o: camellia_simd128_with_aes_instruction_set.c

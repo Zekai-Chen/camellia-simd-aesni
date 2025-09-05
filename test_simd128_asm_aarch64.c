@@ -35,18 +35,10 @@ static const uint8_t test_ciphertext_128[16] = {
     0x08, 0x57, 0x06, 0x56, 0x48, 0xea, 0xbe, 0x43
 };
 
-/* Convert bytes to hex string */
-static void bytes_to_hex(const uint8_t *bytes, char *hex, int len) {
-    for (int i = 0; i < len; i++) {
-        sprintf(hex + i * 2, "%02x", bytes[i]);
-    }
-}
-
 /* Test single block encryption for correctness */
 static int test_single_block(void) {
     struct camellia_simd_ctx ctx;
     uint8_t output[16];
-    char hex[33] = {0};
     
     printf("Testing Assembly implementation (single block):\n");
     
@@ -68,11 +60,12 @@ static int test_single_block(void) {
     memcpy(output, output_16blks, 16);
     
     /* Check result */
-    bytes_to_hex(output, hex, 16);
     printf("  Plaintext:  ");
     for (int i = 0; i < 16; i++) printf("%02x", test_plaintext[i]);
     printf("\n");
-    printf("  Ciphertext: %s\n", hex);
+    printf("  Ciphertext: ");
+    for (int i = 0; i < 16; i++) printf("%02x", output[i]);
+    printf("\n");
     printf("  Expected:   ");
     for (int i = 0; i < 16; i++) printf("%02x", test_ciphertext_128[i]);
     printf("\n");
@@ -132,13 +125,46 @@ static int test_16block_parallel(void) {
     }
 }
 
-/* Benchmark performance */
+/* Test decryption functionality */
+static int test_decryption(void) {
+    struct camellia_simd_ctx ctx;
+    uint8_t plaintext[16 * 16] = {0};
+    uint8_t ciphertext[16 * 16] = {0};
+    uint8_t decrypted[16 * 16] = {0};
+    
+    printf("\nTesting decryption:\n");
+    
+    /* Setup key */
+    camellia_keysetup_simd128_aarch64_asm(&ctx, test_key_128, 16);
+    
+    /* Create test data */
+    for (int i = 0; i < 16 * 16; i++) {
+        plaintext[i] = i & 0xFF;
+    }
+    
+    /* Encrypt */
+    camellia_encrypt_16blks_simd128_aarch64_asm(&ctx, ciphertext, plaintext);
+    
+    /* Decrypt */
+    camellia_decrypt_16blks_simd128_aarch64_asm(&ctx, decrypted, ciphertext);
+    
+    /* Verify */
+    if (memcmp(plaintext, decrypted, 16 * 16) == 0) {
+        printf("  ✓ Decryption test PASSED\n");
+        return 0;
+    } else {
+        printf("  ✗ Decryption test FAILED\n");
+        return 1;
+    }
+}
+
+/* Performance benchmark */
 static void benchmark_performance(void) {
     struct camellia_simd_ctx ctx;
     uint8_t *input, *output;
     const int num_blocks = 1024 * 64;  /* 1 MB of data */
     const int block_size = 16;
-    const int iterations = 100;
+    const int iterations = 50;
     
     printf("\nPerformance Benchmark:\n");
     printf("  Data size: %d KB per iteration\n", (num_blocks * block_size) / 1024);
@@ -162,7 +188,7 @@ static void benchmark_performance(void) {
     camellia_keysetup_simd128_aarch64_asm(&ctx, test_key_128, 16);
     
     /* Warmup */
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 5; i++) {
         for (int j = 0; j < num_blocks; j += 16) {
             camellia_encrypt_16blks_simd128_aarch64_asm(&ctx, 
                                                         output + j * block_size,
@@ -201,44 +227,11 @@ static void benchmark_performance(void) {
     printf("\nResults:\n");
     printf("  Assembly version:    %.2f MiB/s (%.3f seconds)\n", asm_throughput, asm_time);
     printf("  C/intrinsics version: %.2f MiB/s (%.3f seconds)\n", c_throughput, c_time);
-    printf("  Speedup: %.2fx\n", asm_throughput / c_throughput);
+    printf("  Speedup ratio: %.2fx\n", asm_throughput / c_throughput);
     
 cleanup:
     if (input) free(input);
     if (output) free(output);
-}
-
-/* Test decryption functionality */
-static int test_decryption(void) {
-    struct camellia_simd_ctx ctx;
-    uint8_t plaintext[16 * 16] = {0};
-    uint8_t ciphertext[16 * 16] = {0};
-    uint8_t decrypted[16 * 16] = {0};
-    
-    printf("\nTesting decryption:\n");
-    
-    /* Setup key */
-    camellia_keysetup_simd128_aarch64_asm(&ctx, test_key_128, 16);
-    
-    /* Create test data */
-    for (int i = 0; i < 16 * 16; i++) {
-        plaintext[i] = i & 0xFF;
-    }
-    
-    /* Encrypt */
-    camellia_encrypt_16blks_simd128_aarch64_asm(&ctx, ciphertext, plaintext);
-    
-    /* Decrypt */
-    camellia_decrypt_16blks_simd128_aarch64_asm(&ctx, decrypted, ciphertext);
-    
-    /* Verify */
-    if (memcmp(plaintext, decrypted, 16 * 16) == 0) {
-        printf("  ✓ Decryption test PASSED\n");
-        return 0;
-    } else {
-        printf("  ✗ Decryption test FAILED\n");
-        return 1;
-    }
 }
 
 int main(int argc, char *argv[]) {

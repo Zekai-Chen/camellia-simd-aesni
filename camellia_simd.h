@@ -41,4 +41,12 @@ void camellia_encrypt_32blks_simd256(struct camellia_simd_ctx *ctx, void *out,
 void camellia_decrypt_32blks_simd256(struct camellia_simd_ctx *ctx, void *out,
 				     const void *in);
 
+/* AArch64 assembly implementations */
+#ifdef __aarch64__
+void camellia_encrypt_16blks_simd128_aarch64_asm(struct camellia_simd_ctx *ctx,
+						 void *out, const void *in);
+void camellia_decrypt_16blks_simd128_aarch64_asm(struct camellia_simd_ctx *ctx,
+						 void *out, const void *in);
+#endif
+
 #endif /* _CAMELLIA_SIMD_H_ */

@@ -1311,28 +1311,27 @@ camellia_encrypt_16blks_simd128_aarch64_asm:
     eor     v30.16b, v30.16b, v31.16b
     eor     v0.16b, v0.16b, v31.16b
 
-    // Now arrange in C order: x0-x7 = blocks 0-7, y0-y7 = blocks 8-15
+    // Now arrange in C REVERSE order to match C implementation!
+    // C loads: block 0->x15, block 1->x14, ..., block 15->x0
     // Currently: v16-v23 = blocks 0-7, v24-v30,v0 = blocks 8-15
-    // Move to correct registers: v0-v7 = blocks 0-7, v8-v15 = blocks 8-15
-    // IMPORTANT: Save block 15 (currently in v0) to v15 FIRST before v0 is overwritten
-    mov     v15.16b, v0.16b             // Save block 15 from v0 to v15
-    mov     v0.16b, v16.16b             // Now safe to move block 0 to v0
-    mov     v1.16b, v17.16b
-    mov     v2.16b, v18.16b
-    mov     v3.16b, v19.16b
-    mov     v4.16b, v20.16b
-    mov     v5.16b, v21.16b
-    mov     v6.16b, v22.16b
-    mov     v7.16b, v23.16b
+    // Need to reverse: v0 = block 15, v1 = block 14, ..., v15 = block 0
+    // v0 already has block 15, keep it there!
+    mov     v1.16b, v30.16b             // v1 = block 14
+    mov     v2.16b, v29.16b             // v2 = block 13
+    mov     v3.16b, v28.16b             // v3 = block 12
+    mov     v4.16b, v27.16b             // v4 = block 11
+    mov     v5.16b, v26.16b             // v5 = block 10
+    mov     v6.16b, v25.16b             // v6 = block 9
+    mov     v7.16b, v24.16b             // v7 = block 8
 
-    mov     v8.16b, v24.16b
-    mov     v9.16b, v25.16b
-    mov     v10.16b, v26.16b
-    mov     v11.16b, v27.16b
-    mov     v12.16b, v28.16b
-    mov     v13.16b, v29.16b
-    mov     v14.16b, v30.16b
-    // v15 already has block 15 from above
+    mov     v8.16b, v23.16b             // v8 = block 7
+    mov     v9.16b, v22.16b             // v9 = block 6
+    mov     v10.16b, v21.16b            // v10 = block 5
+    mov     v11.16b, v20.16b            // v11 = block 4
+    mov     v12.16b, v19.16b            // v12 = block 3
+    mov     v13.16b, v18.16b            // v13 = block 2
+    mov     v14.16b, v17.16b            // v14 = block 1
+    mov     v15.16b, v16.16b            // v15 = block 0
 
     /*
      * Step 2: Byteslice transformation (forward)

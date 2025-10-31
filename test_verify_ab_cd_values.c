@@ -1,0 +1,145 @@
+/*
+ * Verify assembly AB and CD register values before byteslice
+ */
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+#include "camellia_simd.h"
+
+static const uint8_t test_key_128[16] = {
+    0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+    0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10
+};
+
+static const uint8_t test_input[16] = {
+    0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+    0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10
+};
+
+// External debug buffers written by assembly
+extern uint8_t debug_v0[16];
+extern uint8_t debug_v1[16];
+extern uint8_t debug_v2[16];
+extern uint8_t debug_v3[16];
+extern uint8_t debug_v4[16];
+extern uint8_t debug_v5[16];
+extern uint8_t debug_v6[16];
+extern uint8_t debug_v7[16];
+extern uint8_t debug_v8[16];
+extern uint8_t debug_v9[16];
+extern uint8_t debug_v10[16];
+extern uint8_t debug_v11[16];
+extern uint8_t debug_v12[16];
+extern uint8_t debug_v13[16];
+extern uint8_t debug_v14[16];
+extern uint8_t debug_v15[16];
+
+// Main assembly function
+extern void camellia_encrypt_16blks_simd128_aarch64_asm(
+    struct camellia_simd_ctx *ctx,
+    void *out, const void *in
+);
+
+void print_vector(const char *label, const uint8_t *data) {
+    printf("%s: ", label);
+    for (int i = 0; i < 16; i++) {
+        printf("%02x", data[i]);
+    }
+    printf("\n");
+}
+
+int main(void) {
+    struct camellia_simd_ctx ctx;
+    uint8_t input[256], output[256];
+
+    printf("========================================\n");
+    printf("Verify Assembly AB/CD Register Values\n");
+    printf("========================================\n\n");
+
+    camellia_keysetup_simd128(&ctx, test_key_128, 16);
+
+    // Create input: repeat test block 16 times
+    for (int i = 0; i < 16; i++) {
+        memcpy(&input[i * 16], test_input, 16);
+    }
+
+    printf("Expected C reference values (before outunpack):\n");
+    printf("  x0: 08, x1: 57, x2: 06, x3: 56\n");
+    printf("  x4: 48, x5: ea, x6: be, x7: 43\n");
+    printf("  x8: c8, x9: bb, x10: 99, x11: 6e\n");
+    printf("  x12: e8, x13: 30, x14: ff, x15: 8a\n\n");
+
+    // Call assembly function (will write to debug globals)
+    camellia_encrypt_16blks_simd128_aarch64_asm(&ctx, output, input);
+
+    printf("Assembly actual register values:\n");
+    print_vector("  v0 ", debug_v0);
+    print_vector("  v1 ", debug_v1);
+    print_vector("  v2 ", debug_v2);
+    print_vector("  v3 ", debug_v3);
+    print_vector("  v4 ", debug_v4);
+    print_vector("  v5 ", debug_v5);
+    print_vector("  v6 ", debug_v6);
+    print_vector("  v7 ", debug_v7);
+    print_vector("  v8 ", debug_v8);
+    print_vector("  v9 ", debug_v9);
+    print_vector("  v10", debug_v10);
+    print_vector("  v11", debug_v11);
+    print_vector("  v12", debug_v12);
+    print_vector("  v13", debug_v13);
+    print_vector("  v14", debug_v14);
+    print_vector("  v15", debug_v15);
+
+    printf("\n");
+
+    // Map C variables to expected assembly registers
+    // After last roundsm16(v4,v5,v6,v7,v0,v1,v2,v3,...), AB is in v4-v7,v0-v3
+    // C code has AB in x4,x5,x6,x7,x0,x1,x2,x3 after roundsm16(x4,x5,x6,x7,x0,x1,x2,x3,...)
+    printf("Checking register correspondence:\n");
+    const uint8_t expected[16][16] = {
+        {0x08,0x08,0x08,0x08,0x08,0x08,0x08,0x08,0x08,0x08,0x08,0x08,0x08,0x08,0x08,0x08}, // v0=x0
+        {0x57,0x57,0x57,0x57,0x57,0x57,0x57,0x57,0x57,0x57,0x57,0x57,0x57,0x57,0x57,0x57}, // v1=x1
+        {0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06}, // v2=x2
+        {0x56,0x56,0x56,0x56,0x56,0x56,0x56,0x56,0x56,0x56,0x56,0x56,0x56,0x56,0x56,0x56}, // v3=x3
+        {0x48,0x48,0x48,0x48,0x48,0x48,0x48,0x48,0x48,0x48,0x48,0x48,0x48,0x48,0x48,0x48}, // v4=x4
+        {0xea,0xea,0xea,0xea,0xea,0xea,0xea,0xea,0xea,0xea,0xea,0xea,0xea,0xea,0xea,0xea}, // v5=x5
+        {0xbe,0xbe,0xbe,0xbe,0xbe,0xbe,0xbe,0xbe,0xbe,0xbe,0xbe,0xbe,0xbe,0xbe,0xbe,0xbe}, // v6=x6
+        {0x43,0x43,0x43,0x43,0x43,0x43,0x43,0x43,0x43,0x43,0x43,0x43,0x43,0x43,0x43,0x43}, // v7=x7
+        {0xc8,0xc8,0xc8,0xc8,0xc8,0xc8,0xc8,0xc8,0xc8,0xc8,0xc8,0xc8,0xc8,0xc8,0xc8,0xc8}, // v8=x8
+        {0xbb,0xbb,0xbb,0xbb,0xbb,0xbb,0xbb,0xbb,0xbb,0xbb,0xbb,0xbb,0xbb,0xbb,0xbb,0xbb}, // v9=x9
+        {0x99,0x99,0x99,0x99,0x99,0x99,0x99,0x99,0x99,0x99,0x99,0x99,0x99,0x99,0x99,0x99}, // v10=x10
+        {0x6e,0x6e,0x6e,0x6e,0x6e,0x6e,0x6e,0x6e,0x6e,0x6e,0x6e,0x6e,0x6e,0x6e,0x6e,0x6e}, // v11=x11
+        {0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8}, // v12=x12
+        {0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x30}, // v13=x13
+        {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff}, // v14=x14
+        {0x8a,0x8a,0x8a,0x8a,0x8a,0x8a,0x8a,0x8a,0x8a,0x8a,0x8a,0x8a,0x8a,0x8a,0x8a,0x8a}, // v15=x15
+    };
+
+    uint8_t *asm_regs[16] = {
+        debug_v0, debug_v1, debug_v2, debug_v3,
+        debug_v4, debug_v5, debug_v6, debug_v7,
+        debug_v8, debug_v9, debug_v10, debug_v11,
+        debug_v12, debug_v13, debug_v14, debug_v15
+    };
+
+    int match = 1;
+    for (int i = 0; i < 16; i++) {
+        if (memcmp(asm_regs[i], expected[i], 16) != 0) {
+            printf("  MISMATCH: v%d does not match C x%d!\n", i, i);
+            match = 0;
+        } else {
+            printf("  OK: v%d = x%d\n", i, i);
+        }
+    }
+
+    if (match) {
+        printf("SUCCESS: All register values match C reference!\n");
+        printf("=> AB/CD loading is CORRECT\n");
+        printf("=> Next: Check byteslice parameter order and write_output mapping\n");
+    } else {
+        printf("FAILURE: Register values do NOT match!\n");
+        printf("=> AB/CD loading or register correspondence is WRONG\n");
+    }
+
+    return match ? 0 : 1;
+}

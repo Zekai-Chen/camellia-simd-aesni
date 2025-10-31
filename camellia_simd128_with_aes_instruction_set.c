@@ -16,7 +16,11 @@
  */
 
 #include <stdint.h>
+#include <stdio.h>
 #include "camellia_simd.h"
+
+/* DEBUG: Flag to capture first roundsm16 output */
+static int debug_first_roundsm16_done = 0;
 
 #if defined(__powerpc__) && defined(__VSX__) && defined(__CRYPTO__) && \
     (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
@@ -510,6 +514,7 @@ static const uint8x16_t shift_row =
 	vmovdqa128(x1, mem_cd[5]); \
 	vmovdqa128(x2, mem_cd[6]); \
 	vmovdqa128(x3, mem_cd[7]); \
+	debug_print_cd_after_first_roundsm16(mem_cd); \
 	\
 	roundsm16(x4, x5, x6, x7, x0, x1, x2, x3, y0, y1, y2, y3, y4, y5, \
 		  y6, y7, mem_ab, ctx->key_table[(i) + (dir)]); \
@@ -1022,6 +1027,24 @@ static const __m128i mask_0f =
 
 /* Encrypts 16 input block from IN and writes result to OUT. IN and OUT may
  * unaligned pointers. */
+/* DEBUG: Print CD state after first roundsm16 */
+static void debug_print_cd_after_first_roundsm16(__m128i *cd) {
+    if (debug_first_roundsm16_done) return;
+    debug_first_roundsm16_done = 1;
+
+    printf("DEBUG: CD state after first roundsm16 (C implementation):\n");
+    for (int i = 0; i < 8; i++) {
+        printf("  CD[%d]: ", i);
+        uint8_t data[16];
+        vmovdqa128(cd[i], *(__m128i*)data);
+        for (int j = 0; j < 16; j++) {
+            if (j > 0 && j % 4 == 0) printf(" ");
+            printf("%02x", data[j]);
+        }
+        printf("\n");
+    }
+}
+
 void camellia_encrypt_16blks_simd128(struct camellia_simd_ctx *ctx, void *vout,
 				     const void *vin)
 {
@@ -1047,7 +1070,53 @@ void camellia_encrypt_16blks_simd128(struct camellia_simd_ctx *ctx, void *vout,
   inpack16_post(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14,
 		x15, ab, cd);
 
+  /* DEBUG: Print AB and CD after byteslice */
+  {
+    static int byteslice_done = 0;
+    if (!byteslice_done) {
+      byteslice_done = 1;
+      printf("DEBUG C: AB state AFTER byteslice (before first roundsm16):\n");
+      for (int i = 0; i < 8; i++) {
+        printf("  AB[%d]: ", i);
+        uint8_t data[16];
+        vmovdqa128(ab[i], *(__m128i*)data);
+        for (int j = 0; j < 16; j++) {
+          printf("%02x", data[j]);
+        }
+        printf("\n");
+      }
+      printf("\nDEBUG C: CD state AFTER byteslice (before first roundsm16):\n");
+      for (int i = 0; i < 8; i++) {
+        printf("  CD[%d]: ", i);
+        uint8_t data[16];
+        vmovdqa128(cd[i], *(__m128i*)data);
+        for (int j = 0; j < 16; j++) {
+          printf("%02x", data[j]);
+        }
+        printf("\n");
+      }
+      printf("\n");
+    }
+  }
+
   k = 0;
+
+  /* DEBUG: Print AB and CD state before first roundsm16 */
+  if (!debug_first_roundsm16_done) {
+    printf("DEBUG: AB state BEFORE first roundsm16 (after inpack):\n");
+    for (int i = 0; i < 8; i++) {
+      printf("  AB[%d]: ", i);
+      uint8_t data[16];
+      vmovdqa128(ab[i], *(__m128i*)data);
+      for (int j = 0; j < 16; j++) {
+        if (j > 0 && j % 4 == 0) printf(" ");
+        printf("%02x", data[j]);
+      }
+      printf("\n");
+    }
+    printf("\n");
+  }
+
   while (1) {
     enc_rounds16(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14,
 	         x15, ab, cd, k);
@@ -1071,8 +1140,64 @@ void camellia_encrypt_16blks_simd128(struct camellia_simd_ctx *ctx, void *vout,
   vmovdqa128(cd[6], x14);
   vmovdqa128(cd[7], x15);
 
+  /* DEBUG: Print AB and CD before outunpack */
+  {
+    static int outunpack_debug_done = 0;
+    if (!outunpack_debug_done) {
+      outunpack_debug_done = 1;
+      printf("\nDEBUG: ALL AB variables (x0-x7) before outunpack:\n");
+      uint8_t data[16];
+      vmovdqa128(x0, *(__m128i*)data);
+      printf("  x0: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x1, *(__m128i*)data);
+      printf("  x1: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x2, *(__m128i*)data);
+      printf("  x2: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x3, *(__m128i*)data);
+      printf("  x3: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x4, *(__m128i*)data);
+      printf("  x4: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x5, *(__m128i*)data);
+      printf("  x5: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x6, *(__m128i*)data);
+      printf("  x6: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x7, *(__m128i*)data);
+      printf("  x7: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+
+      printf("DEBUG: ALL CD variables (x8-x15) before outunpack:\n");
+      vmovdqa128(x8, *(__m128i*)data);
+      printf("  x8: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x9, *(__m128i*)data);
+      printf("  x9: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x10, *(__m128i*)data);
+      printf("  x10: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x11, *(__m128i*)data);
+      printf("  x11: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x12, *(__m128i*)data);
+      printf("  x12: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x13, *(__m128i*)data);
+      printf("  x13: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x14, *(__m128i*)data);
+      printf("  x14: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+      vmovdqa128(x15, *(__m128i*)data);
+      printf("  x15: "); for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n");
+    }
+  }
+
   outunpack16(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14,
 	      x15, ctx->key_table[lastk], tmp0, tmp1);
+
+  /* DEBUG: Print first block after outunpack */
+  {
+    static int write_debug_done = 0;
+    if (!write_debug_done) {
+      write_debug_done = 1;
+      printf("DEBUG: After outunpack, x7 (will become output block 0):\n  ");
+      uint8_t data[16];
+      vmovdqa128(x7, *(__m128i*)data);
+      for (int i = 0; i < 16; i++) printf("%02x", data[i]); printf("\n\n");
+    }
+  }
 
   write_output(x7, x6, x5, x4, x3, x2, x1, x0, x15, x14, x13, x12, x11, x10, x9,
 	       x8, out);
